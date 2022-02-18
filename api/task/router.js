@@ -1,29 +1,37 @@
 // build your `/api/tasks` router here
-const express = require('express')
-const Tasks = require('./model')
-const router = express.Router()
+const router = require('express').Router()
+const TM = require('./model')
 
-router.get('/', (req, res, next) => {
-    Tasks.getAll()
-    .then((task) => {
-        res.status(200).json(task)
+
+router.get('/', async (req, res, next) => {
+    try {
+      const tasks = await TM.getAllTasks()
+        res.status(200).json(tasks) 
+    } catch (err) {
+        next(err)  
+    }
+})
+
+
+router.post('/', (req, res, next) => {
+  TM.createTasks(req.body)
+    .then(addNewTask => {
+        res.status(201).json({
+          status: 201,
+          task_id: addNewTask[0].task_id,
+          task_description: addNewTask[0].task_description,
+          task_notes: addNewTask[0].task_notes,
+          task_completed: addNewTask[0].task_completed === 0 ? false : true,
+          project_id: addNewTask[0].project_id,
+        })
     })
     .catch(next)
 })
 
-router.post('/', async (req, res, next) => { 
-    try{
-        const newTask = await Tasks.create(req.body)
-        res.status(201).json({
-            task_id: newTask.task_id,
-            task_description: newTask.task_description,
-            task_notes: newTask.task_notes,
-            task_completed: newTask.task_completed === 0 ? false : true,
-            project_id: newTask.project_id
-        })
-    }catch(err){
-        next(err)
-    }
+router.use((err, req, res, next) => { // eslint-disable-line
+    res.status(err.status || 500).json({
+      message: err.message,
+    })
 })
 
-module.exports = router
+module.exports = router;
